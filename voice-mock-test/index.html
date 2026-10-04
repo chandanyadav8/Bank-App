@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Voice Mock Test — Java Collection Framework</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <div class="container">
+      <header>
+        <h1>Voice Mock Test Assistant</h1>
+        <p class="subtitle">Ask → Listen → Correct → Next</p>
+        <div class="topic-badge">
+          <span id="topicTitle">Java Collection Framework</span>
+          <span>•</span>
+          <span id="topicLevel">3 years experience</span>
+        </div>
+      </header>
+
+      <section class="card">
+        <div class="status-row">
+          <div class="mic-indicator" id="micIndicator" aria-hidden="true">
+            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path
+                d="M12 14a3 3 0 0 0 3-3V5a3 3 0 1 0-6 0v6a3 3 0 0 0 3 3zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V21h2v-3.08A7 7 0 0 0 19 11h-2z"
+              />
+            </svg>
+          </div>
+          <p id="status">Ready — click "Start Voice Test"</p>
+          <div class="score" id="score">0 / 10</div>
+        </div>
+
+        <div class="controls">
+          <button class="btn-primary" id="startBtn">Start Voice Test</button>
+          <button class="btn-secondary" id="repeatBtn" disabled>Repeat Question</button>
+          <button class="btn-secondary" id="skipBtn" disabled>Skip Question</button>
+          <button class="btn-danger" id="stopBtn" disabled>Stop</button>
+        </div>
+
+        <p class="hint">
+          Use Chrome or Edge. Allow microphone access. Say your answer clearly, then say
+          <strong>next</strong> to continue.
+        </p>
+      </section>
+
+      <section class="card">
+        <h2>Current Question</h2>
+        <div class="question-meta" id="questionNum">Question 0 of 10</div>
+        <p class="question-text" id="questionText">Press Start to begin the voice mock test.</p>
+      </section>
+
+      <section class="card">
+        <h2>Your Answer (transcript)</h2>
+        <div class="answer-box" id="transcript">—</div>
+      </section>
+
+      <section class="card">
+        <h2>Feedback</h2>
+        <div class="feedback-box" id="feedback">—</div>
+      </section>
+
+      <section class="card">
+        <h2>Activity Log</h2>
+        <div class="log" id="log"></div>
+      </section>
+    </div>
+
+    <script src="questions.js"></script>
+    <script src="app.js"></script>
+  </body>
+</html>
