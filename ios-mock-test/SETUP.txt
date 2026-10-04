@@ -1,0 +1,45 @@
+HOW TO RUN ON YOUR iPHONE (requires a Mac with Xcode)
+======================================================
+
+1. Copy the folder `ios-mock-test/MockTestApp` to your Mac.
+
+2. Open Xcode → File → New → Project → iOS → App
+   - Product Name: MockTestApp
+   - Interface: SwiftUI
+   - Language: Swift
+   - Minimum iOS: 17.0
+
+3. Delete the default Swift files Xcode creates.
+
+4. Drag ALL files from MockTestApp/ into the Xcode project:
+   - MockTestApp.swift
+   - Models/Question.swift
+   - Models/QuestionsData.swift
+   - Services/SpeechManager.swift
+   - ViewModels/QuizViewModel.swift
+   - Views/ContentView.swift
+
+5. Replace Info.plist entries:
+   - Open project → Target → Info
+   - Add Privacy - Microphone Usage Description
+   - Add Privacy - Speech Recognition Usage Description
+   (Or merge from the provided Info.plist)
+
+6. Connect your iPhone → select it as run target → press Run (▶).
+
+7. Allow Microphone and Speech Recognition when prompted.
+
+FEATURES
+--------
+- Speaks each question aloud (AVSpeechSynthesizer)
+- Listens for your spoken answer (SFSpeechRecognizer)
+- Grades and speaks correction
+- Waits for you to say "next"
+- Works locally on device (on-device recognition when supported)
+- No internet or server required after install
+
+REQUIREMENTS
+------------
+- Mac with Xcode 15+
+- iPhone with iOS 17+
+- Free Apple ID (for personal device testing)

@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
+    />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="theme-color" content="#0f1419" />
+    <title>Mock Test — Java Collection Framework</title>
+    <link rel="manifest" href="manifest.json" />
+    <link rel="apple-touch-icon" href="icon.svg" />
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <div class="container">
+      <header>
+        <h1>Mock Test Assistant</h1>
+        <p class="subtitle">Voice or Chat — works on iPhone &amp; Cursor mobile</p>
+        <div class="topic-badge">
+          <span id="topicTitle">Java Collection Framework</span>
+          <span>•</span>
+          <span id="topicLevel">3 years experience</span>
+        </div>
+      </header>
+
+      <section class="card">
+        <div class="status-row">
+          <div class="mic-indicator" id="micIndicator" aria-hidden="true">
+            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path
+                d="M12 14a3 3 0 0 0 3-3V5a3 3 0 1 0-6 0v6a3 3 0 0 0 3 3zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V21h2v-3.08A7 7 0 0 0 19 11h-2z"
+              />
+            </svg>
+          </div>
+          <p id="status">Ready — click "Start Voice Test"</p>
+          <div class="score" id="score">0 / 10</div>
+        </div>
+
+        <div class="mode-toggle" role="group" aria-label="Test mode">
+          <button class="mode-btn active" id="chatModeBtn" data-mode="chat">Chat Mode</button>
+          <button class="mode-btn" id="voiceModeBtn" data-mode="voice">Voice Mode</button>
+        </div>
+
+        <div class="controls">
+          <button class="btn-primary" id="startBtn">Start Test</button>
+          <button class="btn-secondary" id="repeatBtn" disabled>Repeat Question</button>
+          <button class="btn-secondary" id="skipBtn" disabled>Skip Question</button>
+          <button class="btn-danger" id="stopBtn" disabled>Stop</button>
+        </div>
+
+        <div class="answer-input-row" id="answerInputRow">
+          <textarea
+            id="answerInput"
+            rows="3"
+            placeholder="Type your answer here (best for iPhone &amp; Cursor mobile)..."
+            enterkeyhint="send"
+          ></textarea>
+          <button class="btn-primary" id="submitAnswerBtn" disabled>Submit Answer</button>
+        </div>
+
+        <p class="hint" id="modeHint">
+          <strong>Chat Mode</strong> — read the question, type your answer, tap Submit. Say or type
+          <strong>next</strong> after feedback. Best for iPhone and Cursor mobile app.
+        </p>
+      </section>
+
+      <section class="card">
+        <h2>Current Question</h2>
+        <div class="question-meta" id="questionNum">Question 0 of 10</div>
+        <p class="question-text" id="questionText">Press Start to begin the voice mock test.</p>
+      </section>
+
+      <section class="card">
+        <h2>Your Answer (transcript)</h2>
+        <div class="answer-box" id="transcript">—</div>
+      </section>
+
+      <section class="card">
+        <h2>Feedback</h2>
+        <div class="feedback-box" id="feedback">—</div>
+      </section>
+
+      <section class="card">
+        <h2>Activity Log</h2>
+        <div class="log" id="log"></div>
+      </section>
+    </div>
+
+    <script src="questions.js"></script>
+    <script src="app.js"></script>
+  </body>
+</html>
