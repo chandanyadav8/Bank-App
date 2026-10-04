@@ -2,14 +2,22 @@ const SpeechRecognition =
   window.SpeechRecognition || window.webkitSpeechRecognition;
 const synth = window.speechSynthesis;
 
+const isIOS =
+  /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+  (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+const isMobile = isIOS || /Android|webOS|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+
 const state = {
   topic: "java-collection-framework",
   questions: [],
   index: 0,
   score: 0,
-  phase: "idle", // idle | asking | listening | feedback | confirm
+  mode: "chat", // chat | voice
+  phase: "idle",
   recognition: null,
   listening: false,
+  quizRunning: false,
+  waitingForNext: false,
 };
 
 const els = {
@@ -27,6 +35,12 @@ const els = {
   skipBtn: document.getElementById("skipBtn"),
   stopBtn: document.getElementById("stopBtn"),
   log: document.getElementById("log"),
+  chatModeBtn: document.getElementById("chatModeBtn"),
+  voiceModeBtn: document.getElementById("voiceModeBtn"),
+  answerInput: document.getElementById("answerInput"),
+  submitAnswerBtn: document.getElementById("submitAnswerBtn"),
+  answerInputRow: document.getElementById("answerInputRow"),
+  modeHint: document.getElementById("modeHint"),
 };
 
 function log(message, type = "info") {
@@ -51,14 +65,14 @@ function normalize(text) {
 
 function speak(text) {
   return new Promise((resolve) => {
-    if (!synth) {
+    if (!synth || state.mode !== "voice") {
       resolve();
       return;
     }
     synth.cancel();
     const utterance = new SpeechSynthesisUtterance(text);
-    utterance.rate = 0.95;
-    utterance.pitch = 1;
+    utterance.rate = isIOS ? 0.9 : 0.95;
+    utterance.lang = "en-US";
     utterance.onend = () => resolve();
     utterance.onerror = () => resolve();
     synth.speak(utterance);
@@ -126,7 +140,7 @@ function gradeAnswer(question, rawAnswer) {
   return { verdict: "Incorrect", correct: false, partial: false };
 }
 
-function buildFeedback(question, result, userAnswer) {
+function buildFeedback(question, result) {
   let text = `Verdict: ${result.verdict}. `;
   if (result.correct) {
     text += "Well done. ";
@@ -150,24 +164,25 @@ function showQuestion() {
   els.questionText.textContent = q.text;
   els.transcript.textContent = "—";
   els.feedback.textContent = "—";
+  els.answerInput.value = "";
   updateScore();
 }
 
 function initRecognition() {
-  if (!SpeechRecognition) return null;
+  if (!SpeechRecognition || isIOS) return null;
 
   const recognition = new SpeechRecognition();
   recognition.continuous = false;
   recognition.interimResults = false;
-  recognition.lang = "en-IN";
+  recognition.lang = "en-US";
   recognition.maxAlternatives = 1;
   return recognition;
 }
 
-function listenOnce(prompt = "Listening for your answer...") {
+function listenOnce(prompt = "Listening...") {
   return new Promise((resolve, reject) => {
     if (!state.recognition) {
-      reject(new Error("Speech recognition is not supported in this browser."));
+      reject(new Error("Speech recognition not available on this device."));
       return;
     }
 
@@ -178,13 +193,13 @@ function listenOnce(prompt = "Listening for your answer...") {
     recognition.onresult = (event) => {
       const transcript = event.results[0][0].transcript;
       state.listening = false;
-      setStatus("Processing your answer...", false);
+      setStatus("Processing...", false);
       resolve(transcript);
     };
 
     recognition.onerror = (event) => {
       state.listening = false;
-      setStatus("Could not hear you. Try again.", false);
+      setStatus("Could not hear you.", false);
       reject(new Error(event.error || "recognition-error"));
     };
 
@@ -203,62 +218,131 @@ function listenOnce(prompt = "Listening for your answer...") {
 function isContinueCommand(text) {
   const n = normalize(text);
   return (
+    n === "next" ||
     n.includes("yes") ||
     n.includes("next") ||
     n.includes("continue") ||
     n.includes("move on") ||
     n.includes("go ahead") ||
-    n.includes("ok") ||
+    n === "ok" ||
     n.includes("okay")
   );
+}
+
+function setMode(mode) {
+  state.mode = mode;
+  els.chatModeBtn.classList.toggle("active", mode === "chat");
+  els.voiceModeBtn.classList.toggle("active", mode === "voice");
+  els.answerInputRow.style.display = mode === "chat" ? "flex" : "none";
+
+  if (mode === "chat") {
+    els.modeHint.innerHTML =
+      "<strong>Chat Mode</strong> — read the question, type your answer, tap Submit. Type <strong>next</strong> in the box after feedback. Best for iPhone &amp; Cursor mobile.";
+    setStatus("Chat Mode — tap Start Test", false);
+  } else {
+    els.modeHint.innerHTML =
+      "<strong>Voice Mode</strong> — works best on desktop Chrome/Edge. iPhone users: use Chat Mode instead.";
+    setStatus("Voice Mode — tap Start Test", false);
+  }
+}
+
+function waitForTextInput(prompt) {
+  return new Promise((resolve) => {
+    state.waitingForNext = prompt.includes("next");
+    els.answerInput.placeholder = prompt;
+    els.answerInput.disabled = false;
+    els.submitAnswerBtn.disabled = false;
+    els.answerInput.focus();
+    setStatus(prompt, false);
+
+    const handler = () => {
+      const value = els.answerInput.value.trim();
+      if (!value) return;
+      els.submitAnswerBtn.removeEventListener("click", handler);
+      els.answerInput.removeEventListener("keydown", onKey);
+      els.answerInput.disabled = true;
+      els.submitAnswerBtn.disabled = true;
+      resolve(value);
+    };
+
+    const onKey = (e) => {
+      if (e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault();
+        handler();
+      }
+    };
+
+    els.submitAnswerBtn.addEventListener("click", handler);
+    els.answerInput.addEventListener("keydown", onKey);
+  });
+}
+
+async function getAnswer(prompt) {
+  if (state.mode === "chat") {
+    return waitForTextInput(prompt);
+  }
+  return listenOnce(prompt);
+}
+
+async function waitForContinue() {
+  if (state.mode === "chat") {
+    els.feedback.textContent += "\n\nType **next** below to continue.";
+    const cmd = await waitForTextInput("Type 'next' to continue...");
+    return isContinueCommand(cmd);
+  }
+
+  await speak("Say yes or next when you are ready for the next question.");
+  let confirmed = false;
+  while (!confirmed) {
+    try {
+      const cmd = await listenOnce("Waiting for you to say next...");
+      if (isContinueCommand(cmd)) confirmed = true;
+      else await speak("Please say yes or next to continue.");
+    } catch {
+      await speak("I did not catch that. Please say next to continue.");
+    }
+  }
+  return true;
 }
 
 async function askCurrentQuestion() {
   const question = state.questions[state.index];
   state.phase = "asking";
   showQuestion();
-  log(`Speaking question ${question.id}`);
-  setStatus("Speaking question...", false);
-  await speak(question.text);
-  await speak("Please give your answer now.");
+  log(`Question ${question.id}`);
+
+  if (state.mode === "voice") {
+    setStatus("Speaking question...", false);
+    await speak(question.text);
+    await speak("Please give your answer now.");
+  } else {
+    setStatus("Read the question and type your answer below.", false);
+  }
 
   state.phase = "listening";
   try {
-    const userAnswer = await listenOnce("Listening for your answer...");
+    const userAnswer = await getAnswer(
+      state.mode === "chat" ? "Type your answer here..." : "Listening for your answer..."
+    );
     els.transcript.textContent = userAnswer;
-    log(`You said: ${userAnswer}`, "user");
+    log(`You: ${userAnswer}`, "user");
 
     state.phase = "feedback";
     const result = gradeAnswer(question, userAnswer);
-    const feedbackText = buildFeedback(question, result, userAnswer);
+    const feedbackText = buildFeedback(question, result);
     els.feedback.textContent = feedbackText;
     updateScore();
     log(feedbackText, result.correct ? "success" : "warn");
 
-    await speak(feedbackText);
-    await speak("Say yes or next when you are ready for the next question.");
+    if (state.mode === "voice") await speak(feedbackText);
 
     state.phase = "confirm";
-    let confirmed = false;
-    while (!confirmed) {
-      try {
-        const cmd = await listenOnce("Waiting for you to say next...");
-        els.transcript.textContent = cmd;
-        if (isContinueCommand(cmd)) {
-          confirmed = true;
-        } else {
-          await speak("Please say yes or next to continue.");
-        }
-      } catch {
-        await speak("I did not catch that. Please say next to continue.");
-      }
-    }
+    await waitForContinue();
   } catch (err) {
-    log(`Listen error: ${err.message}`, "error");
-    els.feedback.textContent = "Could not hear your answer. Use Repeat Question or try again.";
-    setStatus("Listen failed — use Repeat or Skip", false);
+    log(`Error: ${err.message}`, "error");
+    els.feedback.textContent = "Could not get your answer. Try typing in Chat Mode.";
+    setStatus("Use Chat Mode on iPhone", false);
     state.phase = "idle";
-    return;
   }
 }
 
@@ -266,7 +350,8 @@ async function runQuiz() {
   els.startBtn.disabled = true;
   els.repeatBtn.disabled = false;
   els.skipBtn.disabled = false;
-  els.stopBtn.disabled = false;
+  els.stopBtn.disabled = true;
+  state.quizRunning = true;
 
   const topic = QUIZ_TOPICS[state.topic];
   state.questions = topic.questions;
@@ -277,34 +362,48 @@ async function runQuiz() {
   els.topicLevel.textContent = topic.level;
   updateScore();
 
-  await speak(
-    `Welcome to your mock test on ${topic.title}. There are ${state.questions.length} questions. I will ask each question, wait for your spoken answer, correct you, and then move to the next question when you say next. Let's begin.`
-  );
+  const welcome =
+    state.mode === "chat"
+      ? `Starting ${topic.title} mock test. ${state.questions.length} questions. Type your answers below.`
+      : `Welcome to your mock test on ${topic.title}. ${state.questions.length} questions. Let's begin.`;
 
-  while (state.index < state.questions.length) {
+  log(welcome);
+  setStatus("Test in progress...", false);
+  if (state.mode === "voice") await speak(welcome);
+
+  while (state.index < state.questions.length && state.quizRunning) {
     await askCurrentQuestion();
     state.index += 1;
   }
 
-  const summary = `Test complete. Your score is ${state.score} out of ${state.questions.length}. ${
+  if (!state.quizRunning) return;
+
+  const summary = `Test complete. Score: ${state.score}/${state.questions.length}. ${
     state.score >= 8
-      ? "Excellent work. You have a strong grasp of the Java Collection Framework."
+      ? "Excellent! Strong grasp of Collection Framework."
       : state.score >= 5
-        ? "Good effort. Review HashMap internals, fail-fast behavior, and thread-safe collections."
-        : "Keep practicing. Focus on Collection versus Collections, ArrayList versus LinkedList, and Map contracts."
+        ? "Good effort. Review HashMap, fail-fast, and thread-safe collections."
+        : "Keep practicing Collection vs Collections, ArrayList vs LinkedList, and Map contracts."
   }`;
+
   els.questionNum.textContent = "Test Complete";
   els.questionText.textContent = summary;
   els.feedback.textContent = summary;
   log(summary, "success");
-  await speak(summary);
+  if (state.mode === "voice") await speak(summary);
 
+  finishQuiz();
+}
+
+function finishQuiz() {
   setStatus("Test finished", false);
   els.startBtn.disabled = false;
   els.repeatBtn.disabled = true;
   els.skipBtn.disabled = true;
   els.stopBtn.disabled = true;
+  els.submitAnswerBtn.disabled = true;
   state.phase = "idle";
+  state.quizRunning = false;
 }
 
 function stopQuiz() {
@@ -312,50 +411,49 @@ function stopQuiz() {
     state.recognition.abort();
   }
   synth.cancel();
+  state.quizRunning = false;
   state.phase = "idle";
-  setStatus("Stopped", false);
-  els.startBtn.disabled = false;
-  log("Quiz stopped by user", "warn");
-}
-
-function checkSupport() {
-  const issues = [];
-  if (!SpeechRecognition) {
-    issues.push("Speech Recognition is not supported. Use Chrome or Edge.");
-  }
-  if (!synth) {
-    issues.push("Speech Synthesis is not supported in this browser.");
-  }
-  if (!window.isSecureContext && location.hostname !== "localhost") {
-    issues.push("Microphone access requires HTTPS or localhost.");
-  }
-  return issues;
+  finishQuiz();
+  log("Test stopped", "warn");
 }
 
 function bindEvents() {
   els.startBtn.addEventListener("click", () => {
-    const issues = checkSupport();
-    if (issues.length) {
-      alert(issues.join("\n"));
+    if (state.mode === "voice" && !state.recognition) {
+      alert("Voice not supported on iPhone. Please use Chat Mode.");
+      setMode("chat");
       return;
     }
     runQuiz();
   });
 
+  els.chatModeBtn.addEventListener("click", () => setMode("chat"));
+  els.voiceModeBtn.addEventListener("click", () => {
+    if (isIOS) {
+      alert("iPhone does not support voice input in browser. Chat Mode is recommended.");
+      setMode("chat");
+      return;
+    }
+    setMode("voice");
+  });
+
   els.repeatBtn.addEventListener("click", async () => {
-    if (state.phase === "idle" && state.questions.length) {
-      const q = state.questions[state.index] || state.questions[state.questions.length - 1];
-      await speak(q.text);
+    const q = state.questions[state.index];
+    if (!q) return;
+    if (state.mode === "voice") await speak(q.text);
+    else {
+      els.questionText.textContent = q.text;
+      setStatus("Question repeated — type your answer.", false);
     }
   });
 
-  els.skipBtn.addEventListener("click", () => {
+  els.skipBtn.addEventListener("click", async () => {
+    if (!state.quizRunning) return;
+    log("Skipped question", "warn");
+    state.index += 1;
     if (state.index < state.questions.length) {
-      log("Skipped to next question", "warn");
+      await askCurrentQuestion();
       state.index += 1;
-      if (state.index < state.questions.length) {
-        askCurrentQuestion();
-      }
     }
   });
 
@@ -366,13 +464,13 @@ function init() {
   state.recognition = initRecognition();
   bindEvents();
 
-  const issues = checkSupport();
-  if (issues.length) {
-    setStatus(issues[0], false);
-    log(issues.join(" "), "error");
+  if (isIOS || isMobile) {
+    setMode("chat");
+    els.voiceModeBtn.disabled = isIOS;
+    log("iPhone/mobile detected — Chat Mode enabled (recommended).");
   } else {
-    setStatus('Ready — click "Start Voice Test"', false);
-    log("Voice assistant ready. Allow microphone access when prompted.");
+    setMode("chat");
+    log("Ready. Chat Mode works everywhere. Voice Mode for desktop Chrome/Edge.");
   }
 }
 
