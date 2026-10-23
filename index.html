@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>I Love You Kanna — Interactive 3D Experience & Video</title>
+  <style>
+    :root {
+      --bg-dark: #0d0612;
+      --accent-rose: #ff3e80;
+      --accent-gold: #ffd1dc;
+      --glass-bg: rgba(25, 10, 30, 0.68);
+      --glass-border: rgba(255, 130, 180, 0.35);
+    }
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    body {
+      background: radial-gradient(circle at 50% 25%, #2b0f30 0%, #0d0612 75%);
+      color: #fff;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      overflow-x: hidden;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    #webgl-canvas {
+      position: fixed;
+      inset: 0;
+      width: 100vw;
+      height: 100vh;
+      z-index: 1;
+      pointer-events: auto;
+    }
+    .ui-container {
+      position: relative;
+      z-index: 10;
+      width: 100%;
+      max-width: 1080px;
+      padding: 28px 24px 48px;
+      display: grid;
+      grid-template-columns: 1fr 380px;
+      gap: 32px;
+      align-items: center;
+      min-height: 100vh;
+      pointer-events: none;
+    }
+    @media (max-width: 860px) {
+      .ui-container {
+        grid-template-columns: 1fr;
+      }
+    }
+    .hero-panel, .video-card {
+      pointer-events: auto;
+      background: var(--glass-bg);
+      backdrop-filter: blur(18px);
+      -webkit-backdrop-filter: blur(18px);
+      border: 1px solid var(--glass-border);
+      border-radius: 28px;
+      padding: 28px;
+      box-shadow: 0 24px 60px rgba(0, 0, 0, 0.55), 0 0 35px rgba(255, 62, 128, 0.18);
+    }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 14px;
+      border-radius: 999px;
+      background: rgba(255, 62, 128, 0.18);
+      border: 1px solid rgba(255, 130, 180, 0.45);
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: #ffb8d2;
+      margin-bottom: 16px;
+    }
+    h1 {
+      font-size: clamp(2rem, 3.8vw, 3.2rem);
+      font-weight: 800;
+      line-height: 1.1;
+      background: linear-gradient(135deg, #ffffff 0%, #ffb6d5 50%, #ff4785 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 14px;
+    }
+    p.subtitle {
+      font-size: 1.05rem;
+      line-height: 1.6;
+      color: rgba(255, 230, 240, 0.85);
+      margin-bottom: 24px;
+    }
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    .btn {
+      cursor: pointer;
+      border: none;
+      border-radius: 14px;
+      padding: 13px 22px;
+      font-size: 0.95rem;
+      font-weight: 700;
+      display: inline-flex;
+      align-items: center;
+      gap: 9px;
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+      text-decoration: none;
+    }
+    .btn-primary {
+      background: linear-gradient(135deg, #ff3e80, #d81b60);
+      color: #fff;
+      box-shadow: 0 10px 25px rgba(255, 62, 128, 0.4);
+    }
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 14px 30px rgba(255, 62, 128, 0.6);
+    }
+    .btn-secondary {
+      background: rgba(255, 255, 255, 0.1);
+      color: #ffe4ef;
+      border: 1px solid rgba(255, 175, 205, 0.35);
+    }
+    .btn-secondary:hover {
+      background: rgba(255, 255, 255, 0.18);
+      transform: translateY(-2px);
+    }
+    .video-card {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 16px;
+    }
+    .video-card video {
+      width: 100%;
+      border-radius: 20px;
+      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5);
+      border: 1px solid rgba(255, 160, 200, 0.3);
+      background: #000;
+    }
+    .video-caption {
+      margin-top: 12px;
+      font-size: 0.85rem;
+      color: #ffbfd6;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="webgl-canvas"></canvas>
+
+  <main class="ui-container">
+    <section class="hero-panel">
+      <div class="badge">3D Talking Portrait &amp; WebGL Scene</div>
+      <h1>I Love You, Kanna</h1>
+      <p class="subtitle">
+        A personalized 3D animated video and interactive Three.js experience featuring
+        depth-mapped 3D parallax camera motion, lip-synced voice synthesis saying
+        <em>"I love you Kanna"</em>, and volumetric 3D floating hearts.
+      </p>
+      <div class="controls">
+        <button class="btn btn-primary" id="speak-btn">
+          Speak "I Love You Kanna"
+        </button>
+        <a class="btn btn-secondary" href="output/i_love_you_kanna_3d.mp4" download="i_love_you_kanna_3d.mp4">
+          Download 3D Video (MP4)
+        </a>
+      </div>
+    </section>
+
+    <aside class="video-card">
+      <video id="kanna-video" src="output/i_love_you_kanna_3d.mp4" controls autoplay loop playsinline></video>
+      <div class="video-caption">3D Rendered MP4 with Lip-Sync &amp; Stereo Soundtrack</div>
+    </aside>
+  </main>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script>
+    const canvas = document.getElementById("webgl-canvas");
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 100);
+    camera.position.set(0, 0, 7.5);
+
+    const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+
+    // Lighting
+    const ambientLight = new THREE.AmbientLight(0xffb6d5, 0.75);
+    scene.add(ambientLight);
+
+    const pointLight1 = new THREE.PointLight(0xff3e80, 2.2, 25);
+    pointLight1.position.set(4, 4, 5);
+    scene.add(pointLight1);
+
+    const pointLight2 = new THREE.PointLight(0xffd584, 1.6, 25);
+    pointLight2.position.set(-4, -2, 4);
+    scene.add(pointLight2);
+
+    // 3D Extruded Heart Geometry
+    const heartShape = new THREE.Shape();
+    const x = 0, y = 0;
+    heartShape.moveTo(x + 0.25, y + 0.25);
+    heartShape.bezierCurveTo(x + 0.25, y + 0.25, x + 0.2, y, x, y);
+    heartShape.bezierCurveTo(x - 0.3, y, x - 0.3, y + 0.35, x - 0.3, y + 0.35);
+    heartShape.bezierCurveTo(x - 0.3, y + 0.55, x - 0.1, y + 0.77, x + 0.25, y + 0.95);
+    heartShape.bezierCurveTo(x + 0.6, y + 0.77, x + 0.8, y + 0.55, x + 0.8, y + 0.35);
+    heartShape.bezierCurveTo(x + 0.8, y + 0.35, x + 0.8, y, x + 0.5, y);
+    heartShape.bezierCurveTo(x + 0.35, y, x + 0.25, y + 0.25, x + 0.25, y + 0.25);
+
+    const extrudeSettings = {
+      depth: 0.22,
+      bevelEnabled: true,
+      bevelSegments: 5,
+      steps: 2,
+      bevelSize: 0.08,
+      bevelThickness: 0.08
+    };
+    const heartGeo = new THREE.ExtrudeGeometry(heartShape, extrudeSettings);
+    heartGeo.center();
+    heartGeo.rotateZ(Math.PI);
+
+    const heartMat = new THREE.MeshPhysicalMaterial({
+      color: 0xff2a70,
+      metalness: 0.15,
+      roughness: 0.2,
+      clearcoat: 0.9,
+      clearcoatRoughness: 0.1
+    });
+
+    const hearts = [];
+    for (let i = 0; i < 32; i++) {
+      const mesh = new THREE.Mesh(heartGeo, heartMat);
+      mesh.position.set(
+        (Math.random() - 0.5) * 14,
+        (Math.random() - 0.5) * 9,
+        (Math.random() - 0.5) * 6 - 1
+      );
+      const scale = 0.25 + Math.random() * 0.55;
+      mesh.scale.set(scale, scale, scale);
+      mesh.rotation.set(Math.random() * Math.PI, Math.random() * Math.PI, 0);
+      mesh.userData = {
+        speedY: 0.008 + Math.random() * 0.015,
+        rotSpeed: 0.01 + Math.random() * 0.02,
+        phase: Math.random() * Math.PI * 2,
+        baseScale: scale
+      };
+      scene.add(mesh);
+      hearts.push(mesh);
+    }
+
+    let mouseX = 0, mouseY = 0;
+    window.addEventListener("mousemove", (e) => {
+      mouseX = (e.clientX / window.innerWidth - 0.5) * 1.5;
+      mouseY = -(e.clientY / window.innerHeight - 0.5) * 1.2;
+    });
+
+    const videoEl = document.getElementById("kanna-video");
+    document.getElementById("speak-btn").addEventListener("click", () => {
+      videoEl.muted = false;
+      videoEl.currentTime = 0;
+      videoEl.play();
+    });
+
+    const clock = new THREE.Clock();
+    function animate() {
+      requestAnimationFrame(animate);
+      const t = clock.getElapsedTime();
+
+      camera.position.x += (mouseX - camera.position.x) * 0.05;
+      camera.position.y += (mouseY - camera.position.y) * 0.05;
+      camera.lookAt(0, 0, 0);
+
+      for (const h of hearts) {
+        h.position.y += h.userData.speedY;
+        if (h.position.y > 5.5) h.position.y = -5.5;
+        h.rotation.y += h.userData.rotSpeed;
+        h.rotation.x = Math.sin(t + h.userData.phase) * 0.35;
+        const pulse = h.userData.baseScale * (1 + 0.08 * Math.sin(t * 4 + h.userData.phase));
+        h.scale.set(pulse, pulse, pulse);
+      }
+
+      renderer.render(scene, camera);
+    }
+    animate();
+
+    window.addEventListener("resize", () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+  </script>
+</body>
+</html>
